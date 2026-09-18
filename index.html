@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이슬이의 일기장</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    background: #e9edf2;
+    color: #222;
+  }
+  header {
+    background: #217346;
+    color: #fff;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  header .badge {
+    font-size: 12px;
+    background: rgba(255,255,255,0.2);
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+
+  .layout { display: flex; height: calc(100vh - 52px); }
+
+  .sheet-pane {
+    width: 340px;
+    min-width: 280px;
+    background: #fff;
+    border-right: 2px solid #b7c6b0;
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet-toolbar { padding: 10px 12px; border-bottom: 1px solid #d6d6d6; background: #f3f6f1; }
+  .sheet-toolbar button {
+    width: 100%; padding: 8px; background: #217346; color: #fff;
+    border: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-weight: 600;
+  }
+  .sheet-scroll { overflow-y: auto; flex: 1; }
+  table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.grid thead th {
+    position: sticky; top: 0; background: #eaf1e6; border: 1px solid #c9d6c3;
+    padding: 6px 4px; font-weight: 700; color: #14532d;
+  }
+  table.grid tbody td {
+    border: 1px solid #e3e8e1; padding: 7px 6px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; max-width: 140px;
+  }
+  table.grid tbody tr { cursor: pointer; }
+  table.grid tbody tr:nth-child(even) { background: #f7faf6; }
+  table.grid tbody tr:hover { background: #dcefe0; }
+  table.grid tbody tr.active { background: #b7e4c7 !important; }
+  .cell-date { color: #555; font-variant-numeric: tabular-nums; }
+
+  .doc-pane {
+    flex: 1; overflow-y: auto; padding: 30px 40px;
+    display: flex; justify-content: center; background: #dfe3e8;
+  }
+  .page {
+    background: #fff; width: 100%; max-width: 760px; min-height: 900px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.18); padding: 60px 70px;
+    font-family: "Batang", "Noto Serif KR", serif; line-height: 1.9;
+  }
+  .page .doc-title {
+    font-size: 26px; font-weight: 700; border-bottom: 2px solid #2b579a;
+    padding-bottom: 10px; margin-bottom: 6px;
+  }
+  .page .doc-meta { font-size: 13px; color: #777; margin-bottom: 28px; font-family: "Malgun Gothic", sans-serif; }
+  .page .doc-body { font-size: 16px; color: #222; }
+  .page .doc-body p { margin: 0 0 14px; white-space: pre-wrap; }
+  .page .doc-body table {
+    border-collapse: collapse; width: 100%; margin: 16px 0; font-family: "Malgun Gothic", sans-serif; font-size: 14px;
+  }
+  .page .doc-body th, .page .doc-body td {
+    border: 1px solid #999; padding: 8px 10px; text-align: left;
+  }
+  .page .doc-body th { background: #eef2f7; font-weight: 700; }
+  .empty-hint { color: #999; font-family: "Malgun Gothic", sans-serif; text-align: center; margin-top: 100px; }
+
+  .writer { border-top: 2px solid #b7c6b0; background: #fbfdfa; padding: 12px; font-size: 13px; }
+  .writer h3 { margin: 0 0 8px; font-size: 13px; color: #14532d; }
+  .writer input {
+    width: 100%; border: 1px solid #c9d6c3; border-radius: 4px; padding: 6px 8px;
+    font-size: 13px; margin-bottom: 6px; font-family: inherit;
+  }
+
+  .rt-toolbar {
+    display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px;
+    background: #eef1ec; border: 1px solid #c9d6c3; border-radius: 4px; padding: 5px;
+  }
+  .rt-toolbar button {
+    width: auto; flex: none; padding: 5px 9px; font-size: 13px;
+    background: #fff; color: #333; border: 1px solid #c9d6c3; border-radius: 3px; cursor: pointer;
+  }
+  .rt-toolbar button:hover { background: #dcefe0; }
+
+  .rt-editor {
+    min-height: 160px; max-height: 300px; overflow-y: auto;
+    border: 1px solid #c9d6c3; border-radius: 4px; background: #fff;
+    padding: 10px; font-size: 13px; line-height: 1.6; margin-bottom: 8px;
+  }
+  .rt-editor:focus { outline: 2px solid #2b579a; }
+  .rt-editor table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+  .rt-editor th, .rt-editor td { border: 1px solid #999; padding: 5px 7px; font-size: 12px; }
+  .rt-editor th { background: #eef2f7; }
+  .rt-editor p { margin: 0 0 8px; }
+
+  .writer .genbtn {
+    width: 100%; padding: 8px; background: #2b579a; color: #fff; border: none;
+    border-radius: 4px; cursor: pointer; font-weight: 600; margin-top: 2px;
+  }
+  .writer .out { margin-top: 8px; }
+  .writer .out textarea {
+    width: 100%; font-family: monospace; font-size: 11px; min-height: 110px;
+    background: #f4f4f4; border: 1px solid #c9d6c3; border-radius: 4px; padding: 6px;
+  }
+  .writer .copybtn { width: 100%; padding: 8px; background: #217346; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; margin-top: 6px; }
+  .writer .hint { color: #888; font-size: 11px; margin-top: 4px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📔 이슬이의 일기장</h1>
+  <span class="badge" id="countBadge">0개의 기록</span>
+</header>
+
+<div class="layout">
+  <div class="sheet-pane">
+    <div class="sheet-toolbar">
+      <button id="newBtn">+ 새 일기 쓰기</button>
+    </div>
+    <div class="sheet-scroll">
+      <table class="grid">
+        <thead><tr><th style="width:34%">날짜</th><th>제목</th><th style="width:14%">기분</th></tr></thead>
+        <tbody id="listBody"></tbody>
+      </table>
+    </div>
+
+    <div class="writer" id="writer" style="display:none;">
+      <h3>✏️ 새 일기 작성 (표 삽입 가능)</h3>
+      <input type="date" id="inDate">
+      <input type="text" id="inTitle" placeholder="제목">
+      <input type="text" id="inMood" placeholder="기분 이모지 (예: 😊)">
+
+      <div class="rt-toolbar">
+        <button type="button" data-cmd="bold"><b>B</b></button>
+        <button type="button" data-cmd="italic"><i>I</i></button>
+        <button type="button" data-cmd="underline"><u>U</u></button>
+        <button type="button" id="insTableBtn">⊞ 표 삽입</button>
+        <button type="button" id="addRowBtn">행 추가</button>
+        <button type="button" id="addColBtn">열 추가</button>
+      </div>
+      <div class="rt-editor" id="rtEditor" contenteditable="true">여기에 내용을 입력하세요...</div>
+
+      <button class="genbtn" id="genBtn">코드 생성하기</button>
+      <div class="out" id="outWrap" style="display:none;">
+        <textarea id="outCode" readonly></textarea>
+        <button class="copybtn" id="copyBtn">📋 복사하기</button>
+        <div class="hint">
+          생성된 코드를 복사한 뒤, GitHub 저장소의 <b>entries.json</b> 파일을 열어
+          맨 앞 <code>[</code> 바로 뒤에 붙여넣고 콤마(,)로 기존 항목과 연결한 다음
+          <b>Commit changes</b>를 누르면 목록에 추가됩니다.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="doc-pane">
+    <div class="page" id="page">
+      <div class="empty-hint">왼쪽 목록에서 날짜를 선택하면<br>이곳에 일기 내용이 표시됩니다.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+var entries = [];
+
+function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+function renderList() {
+  var sorted = entries.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+  var body = document.getElementById("listBody");
+  body.innerHTML = "";
+  for (var i = 0; i < sorted.length; i++) {
+    var e = sorted[i];
+    var tr = document.createElement("tr");
+    tr.innerHTML =
+      '<td class="cell-date">' + e.date + '</td>' +
+      '<td>' + (e.title || "") + '</td>' +
+      '<td>' + (e.mood || "") + '</td>';
+    tr.onclick = (function (entry, row) {
+      return function () {
+        var rows = document.querySelectorAll("#listBody tr");
+        for (var j = 0; j < rows.length; j++) rows[j].className = "";
+        row.className = "active";
+        showEntry(entry);
+      };
+    })(e, tr);
+    body.appendChild(tr);
+  }
+  document.getElementById("countBadge").textContent = sorted.length + "개의 기록";
+  if (sorted.length > 0) body.firstChild.click();
+}
+
+function showEntry(e) {
+  var page = document.getElementById("page");
+  page.innerHTML =
+    '<div class="doc-title">' + escapeHtml(e.title || "(제목 없음)") + '</div>' +
+    '<div class="doc-meta">' + e.date + (e.mood ? "  ·  " + e.mood : "") + '</div>' +
+    '<div class="doc-body">' + (e.content || "") + '</div>';
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function loadEntries() {
+  var xhr = new XMLHttpRequest();
+  xhr.open("GET", "entries.json?_=" + new Date().getTime(), true);
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState === 4 && xhr.status === 200) {
+      try { entries = JSON.parse(xhr.responseText); } catch (e) { entries = []; }
+      renderList();
+    }
+  };
+  xhr.send();
+}
+
+document.getElementById("newBtn").onclick = function () {
+  var w = document.getElementById("writer");
+  w.style.display = (w.style.display === "none") ? "block" : "none";
+  if (w.style.display === "block") {
+    var today = new Date();
+    document.getElementById("inDate").value =
+      today.getFullYear() + "-" + pad(today.getMonth() + 1) + "-" + pad(today.getDate());
+  }
+};
+
+var editor = document.getElementById("rtEditor");
+
+editor.onfocus = function () {
+  if (editor.innerText === "여기에 내용을 입력하세요...") editor.innerHTML = "";
+};
+
+var toolButtons = document.querySelectorAll(".rt-toolbar button[data-cmd]");
+for (var i = 0; i < toolButtons.length; i++) {
+  toolButtons[i].onclick = function () {
+    var cmd = this.getAttribute("data-cmd");
+    editor.focus();
+    document.execCommand(cmd, false, null);
+  };
+}
+
+document.getElementById("insTableBtn").onclick = function () {
+  var rows = prompt("행(가로) 개수를 입력하세요", "2");
+  var cols = prompt("열(세로) 개수를 입력하세요", "2");
+  rows = parseInt(rows, 10) || 2;
+  cols = parseInt(cols, 10) || 2;
+
+  var html = "<table><tbody>";
+  for (var r = 0; r < rows; r++) {
+    html += "<tr>";
+    for (var c = 0; c < cols; c++) {
+      if (r === 0) {
+        html += "<th>제목" + (c + 1) + "</th>";
+      } else {
+        html += "<td>&nbsp;</td>";
+      }
+    }
+    html += "</tr>";
+  }
+  html += "</tbody></table><p><br></p>";
+
+  editor.focus();
+  document.execCommand("insertHTML", false, html);
+};
+
+document.getElementById("addRowBtn").onclick = function () {
+  var sel = window.getSelection();
+  if (!sel.rangeCount) { alert("표 안의 셀을 먼저 클릭하세요."); return; }
+  var node = sel.anchorNode;
+  while (node && node.nodeName !== "TR") node = node.parentNode;
+  if (!node) { alert("표 안의 셀을 먼저 클릭한 뒤 눌러주세요."); return; }
+  var colCount = node.children.length;
+  var newRow = document.createElement("tr");
+  for (var c = 0; c < colCount; c++) {
+    var td = document.createElement("td");
+    td.innerHTML = "&nbsp;";
+    newRow.appendChild(td);
+  }
+  node.parentNode.insertBefore(newRow, node.nextSibling);
+};
+
+document.getElementById("addColBtn").onclick = function () {
+  var sel = window.getSelection();
+  if (!sel.rangeCount) { alert("표 안의 셀을 먼저 클릭하세요."); return; }
+  var node = sel.anchorNode;
+  while (node && node.nodeName !== "TABLE") node = node.parentNode;
+  if (!node) { alert("표 안의 셀을 먼저 클릭한 뒤 눌러주세요."); return; }
+  var rowsEl = node.querySelectorAll("tr");
+  for (var r = 0; r < rowsEl.length; r++) {
+    if (r === 0) {
+      var th = document.createElement("th");
+      th.innerHTML = "제목";
+      rowsEl[r].appendChild(th);
+    } else {
+      var td = document.createElement("td");
+      td.innerHTML = "&nbsp;";
+      rowsEl[r].appendChild(td);
+    }
+  }
+};
+
+document.getElementById("genBtn").onclick = function () {
+  var d = document.getElementById("inDate").value;
+  var t = document.getElementById("inTitle").value;
+  var m = document.getElementById("inMood").value;
+  var content = editor.innerHTML;
+
+  var obj = { date: d, title: t, mood: m, content: content };
+  var json = JSON.stringify(obj, null, 2) + ",";
+  document.getElementById("outCode").value = json;
+  document.getElementById("outWrap").style.display = "block";
+};
+
+document.getElementById("copyBtn").onclick = function () {
+  var ta = document.getElementById("outCode");
+  ta.select();
+  document.execCommand("copy");
+  this.textContent = "✅ 복사됨!";
+  var btn = this;
+  setTimeout(function () { btn.textContent = "📋 복사하기"; }, 1500);
+};
+
+loadEntries();
+</script>
+</body>
+</html>
